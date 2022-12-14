@@ -22,9 +22,8 @@
 
 module start(
     input clk,
-    input power_on,
-    input power_off,
-    input model_select,
-    output [1:0]model
+    input power,
+    input [1:0] model_select,
+    output [1:0] model
     );
 endmodule
