@@ -29,4 +29,8 @@ module semi_state(
     input clk,
     output [1:0]cur
     );
+
+
+
+    
 endmodule

@@ -25,7 +25,12 @@ module semi_command(
     input turn_left,
     input turn_right,
     input go_straight,
+    input go_back,
     output [1:0]cur,
     output clockwise
     );
+
+
+
+
 endmodule

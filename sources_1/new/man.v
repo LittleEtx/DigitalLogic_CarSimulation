@@ -31,7 +31,7 @@ module man(
     output [1:0]cur,
     output move_forward,
     output move_backward,
-    output clockwise,
-    output degree
+    output turn_left,
+    output turn_right
     );
 endmodule
