@@ -10,63 +10,69 @@ module auto_turning (
     output reg is_turning
 );
 
-parameter turning = 750; // * 0.002 = 1.5 s
+parameter TURNING_TIME = 450; // * 0.002 = 0.9 s
 reg [31:0] max_cnt;
 reg [31:0] cnt;
 reg is_turning_temp;
 reg turn_left_temp;
 reg turn_right_temp;
 
+reg [1:0] state;
+reg [1:0] next_state;
+parameter WAITING = 2'b00, LEFT_TURNING = 2'b01, RIGHT_TURNING = 2'b10, BACK_TURNING = 2'b11;
+
+//state output
+always @* begin
+    case (state)
+        WAITING :  {turn_left, turn_right, is_turning} = 3'b000;
+        LEFT_TURNING : {turn_left, turn_right, is_turning} = 3'b101;
+        RIGHT_TURNING : {turn_left, turn_right, is_turning} = 3'b011;
+        BACK_TURNING : {turn_left, turn_right, is_turning} = 3'b011;
+    endcase
+end
+
 //state transfering
 always @* begin
-    if (is_turning) begin
-        if (cnt == max_cnt) begin
-            is_turning_temp = 1'b0;
-        end else begin
-            is_turning_temp = 1'b1;
+    case (state)
+        WAITING : begin
+            case ({trigger_turn_left, trigger_turn_right, trigger_turn_back})
+                3'b100: next_state = LEFT_TURNING;
+                3'b010: next_state = RIGHT_TURNING;
+                3'b001: next_state = BACK_TURNING;
+                default:  next_state = WAITING;
+            endcase
         end
-    end else begin
-        case ({trigger_turn_left, trigger_turn_right, trigger_turn_back})
-            3'b100: begin
-                turn_left_temp = 1'b1;
-                is_turning_temp = 1'b1;
-                max_cnt = (turning >> 1) - 1;
+        LEFT_TURNING, RIGHT_TURNING: begin
+            if (cnt == TURNING_TIME - 1) begin
+                next_state = WAITING;
+            end else begin
+                next_state = state;
             end
-            3'b010: begin
-                turn_right_temp = 1'b1;
-                is_turning_temp = 1'b1;
-                max_cnt = (turning >> 1) - 1;
+        end 
+        BACK_TURNING : begin
+            if (cnt == (TURNING_TIME << 1) - 1) begin
+                next_state = WAITING;
+            end else begin
+                next_state = state;
             end
-            3'b001: begin
-                turn_left_temp = 1'b1;
-                is_turning_temp = 1'b1;
-                max_cnt <= ((turning >> 1) - 1) << 1;
-            end
-            default: begin
-                //do nothing
-                is_turning_temp = 1'b0;
-                turn_left_temp = 1'b0;
-                turn_right_temp = 1'b0;
-            end 
-        endcase
-    end
+        end
+    endcase
 end
 
 //counter
 always @(posedge clk) begin
-    if (is_turning) begin
-        cnt <= cnt + 1;
-    end else begin
-        cnt <= 0;
-    end
+    case (state)
+        LEFT_TURNING, RIGHT_TURNING, BACK_TURNING: cnt <= cnt + 1;
+        default: cnt <= 0;
+    endcase
 end
 
 //state register
 always @(posedge clk) begin
     if (enable) begin
-        {is_turning, turn_left, turn_right} <= {is_turning_temp, turn_left_temp, turn_right_temp};
+        state <= next_state;
     end else begin
-        {is_turning, turn_left, turn_right} = 3'b000;
+        state <= WAITING;
     end
 end
 

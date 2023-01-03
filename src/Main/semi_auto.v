@@ -32,41 +32,40 @@ module semi_auto(
     output reg out_move_forward,
     output reg trigger_turn_left,
     output reg trigger_turn_right,
-    output reg trigger_turn_back
+    output reg trigger_turn_back,
+    output [2:0] out_state
     );
 
 parameter WAITING = 3'b001, 
 TRIGGER_LEFT = 3'b010, TRIGGER_RIGHT = 3'b011, TRIGGER_BACK = 3'b100, TURNING = 3'b101, 
-DIR_MOVING = 3'b110, MOVING = 3'b111;
+DIR_MOVING = 3'b110, MOVING = 3'b111, MOVING_END = 3'b000;
 reg [2:0] state;
-reg [31:0] cnt;
 reg [2:0] next_state;
-reg turn_left;
-reg turn_right;
-reg turn_back;
+//trigger time
+parameter TURNING_TRIGGER = 100; // * 0.002 = 0.2 s
+parameter MOVING_END_TIME = 50; // * 0.002 = 0.1 s
+reg [31:0] turn_cnt;
+reg [31:0] moving_end_cnt;
+
+assign out_state = state;
 
 //state output
 always @* begin
     case (state)
         WAITING, TURNING : begin
-            out_move_forward = 1'b0;
-            {turn_left, turn_right, turn_back} = 3'b000;
+            {out_move_forward, trigger_turn_left, trigger_turn_right, trigger_turn_back} = 4'b0000;
         end 
         TRIGGER_LEFT : begin
-            out_move_forward = 1'b0;
-            {turn_left, turn_right, turn_back} = 3'b100;
+            {out_move_forward, trigger_turn_left, trigger_turn_right, trigger_turn_back} = 4'b0100;
         end
         TRIGGER_RIGHT : begin
-            out_move_forward = 1'b0;
-            {turn_left, turn_right, turn_back} = 3'b010;
+            {out_move_forward, trigger_turn_left, trigger_turn_right, trigger_turn_back} = 4'b0010;
         end
         TRIGGER_BACK : begin
-            out_move_forward = 1'b0;
-            {turn_left, turn_right, turn_back} = 3'b001;
+            {out_move_forward, trigger_turn_left, trigger_turn_right, trigger_turn_back} = 4'b0001;
         end
-        DIR_MOVING, MOVING : begin
-            out_move_forward = 1'b1;
-            {turn_left, turn_right, turn_back} = 3'b000;
+        DIR_MOVING, MOVING, MOVING_END : begin
+            {out_move_forward, trigger_turn_left, trigger_turn_right, trigger_turn_back} = 4'b1000;
         end
     endcase
 end
@@ -86,11 +85,11 @@ always @* begin
                 end
                 8'b0010_0000, 8'b0010_0010, 8'b0010_0100, 8'b0010_0110,
                 8'b0010_1000, 8'b0010_1010, 8'b0010_1100, 8'b0010_1110: begin
-                    next_state = TRIGGER_BACK;
+                    next_state = TRIGGER_RIGHT;
                 end
                 8'b0001_0000, 8'b0001_0001, 8'b0001_0010, 8'b0001_0011,
                 8'b0001_1000, 8'b0001_1001, 8'b0001_1010, 8'b0001_1011: begin
-                    next_state = TRIGGER_RIGHT;
+                    next_state = TRIGGER_BACK;
                 end
                 default: begin
                     next_state = WAITING;
@@ -98,31 +97,44 @@ always @* begin
             endcase
         end
         TRIGGER_LEFT, TRIGGER_RIGHT, TRIGGER_BACK : begin
-            if (cnt == (turning >> 1) - 1)
+            if (turn_cnt == TURNING_TRIGGER - 1) begin
                 next_state = TURNING;
-            else
+            end else begin
                 next_state = state;
+            end
         end
         TURNING : begin
-            if (~is_turning)
+            if (~is_turning) begin
                 next_state = DIR_MOVING;
-            else
+            end else begin
                 next_state = TURNING;
+            end
         end
         DIR_MOVING : begin
-            if (detector == 4'b0011)
+            if (detector == 4'b0011) begin
                 next_state = MOVING;
-            else
+            end else begin
                 next_state = DIR_MOVING;
+            end
         end
         MOVING : begin
-            case (detector)
-                4'b0011: next_state = MOVING;
-                4'b1011: next_state = TRIGGER_BACK;
-                4'b1001: next_state = TRIGGER_LEFT;
-                4'b1010: next_state = TRIGGER_RIGHT;
-                default: next_state = WAITING;
-            endcase
+            if (~detector[1] || ~detector[0] || detector[3]) begin 
+                next_state = MOVING_END;
+            end else begin
+                next_state = MOVING;
+            end   
+        end
+        MOVING_END : begin
+            if (moving_end_cnt == MOVING_END_TIME - 1) begin
+                case (detector)
+                    4'b1011: next_state = TRIGGER_BACK;
+                    4'b1001: next_state = TRIGGER_LEFT;
+                    4'b1010: next_state = TRIGGER_RIGHT;
+                    default: next_state = WAITING;
+                endcase
+            end else begin
+                next_state = MOVING_END;
+            end
         end
     endcase
 end
@@ -130,19 +142,24 @@ end
 //state register
 always @(posedge clk) begin
     if (enable) begin
-        {state, trigger_turn_back, trigger_turn_left, trigger_turn_right} <= {next_state, turn_back, turn_left, turn_right};
+        state <= next_state;
     end else begin
-        {state, trigger_turn_back, trigger_turn_left, trigger_turn_right} <= {WAITING, 3'b000};
+        state <= WAITING;
     end
 end
 
-
-parameter turning = 10; // * 0.002 = 0.02 s
 //counting
 always @(posedge clk) begin
     case (state)
-        TRIGGER_LEFT, TRIGGER_RIGHT, TRIGGER_BACK: cnt <= cnt + 1;
-        default: cnt <= 0;
+        TRIGGER_LEFT, TRIGGER_RIGHT, TRIGGER_BACK: turn_cnt <= turn_cnt + 1;
+        default: turn_cnt <= 0;
+    endcase
+end
+
+always @(posedge clk) begin
+    case (state)
+        MOVING_END: moving_end_cnt <= moving_end_cnt + 1;
+        default: moving_end_cnt <= 0;
     endcase
 end
 

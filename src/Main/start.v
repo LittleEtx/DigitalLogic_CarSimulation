@@ -29,6 +29,6 @@ module start(
     );
 
     //TODO
-    assign mode = 2'b11;
+    assign mode = mode_selection;
 
 endmodule

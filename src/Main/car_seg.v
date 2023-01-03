@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 module car_seg (
     input clk, //500Hz
     input [1:0] mode,

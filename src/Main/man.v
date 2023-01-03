@@ -35,4 +35,10 @@ module man(
     output turn_left,
     output turn_right
     );
+    //TODO
+    assign break = 0;
+    assign move_forward = enable & throttle & ~reverse;
+    assign move_backward = enable & throttle & reverse;
+    assign turn_left = enable & left;
+    assign turn_right = enable & right;
 endmodule

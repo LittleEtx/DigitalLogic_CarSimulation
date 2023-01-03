@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 module minterm_generator (
     input [1:0] in,
     output reg [3:0] out
