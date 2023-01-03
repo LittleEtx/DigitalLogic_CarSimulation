@@ -23,16 +23,14 @@
 module semi_auto(
     input enable,
     input clk, //500Hz
-    input is_turning,
     input move_forward,
     input move_left,
     input move_right,
     input move_backward,
     input [3:0] detector,
     output reg out_move_forward,
-    output reg trigger_turn_left,
-    output reg trigger_turn_right,
-    output reg trigger_turn_back,
+    output turn_left,
+    output turn_right,
     output [2:0] out_state
     );
 
@@ -48,6 +46,20 @@ reg [31:0] turn_cnt;
 reg [31:0] moving_end_cnt;
 
 assign out_state = state;
+
+//auto_turning
+reg trigger_turn_left, trigger_turn_right, trigger_turn_back;
+wire is_turning;
+auto_turning auto_inst(
+    .clk(clk),
+    .enable(enable),
+    .trigger_turn_left(trigger_turn_left),
+    .trigger_turn_right(trigger_turn_right),
+    .trigger_turn_back(trigger_turn_back),
+    .turn_left(turn_left),
+    .turn_right(turn_right),
+    .is_turning(is_turning)
+);
 
 //state output
 always @* begin
@@ -70,13 +82,13 @@ always @* begin
     endcase
 end
 
-//state transfrom
+//state transition
 always @* begin
     case (state)
         WAITING : begin       
             case ({move_forward, move_left, move_right, move_backward, detector})
                 8'b1000_0000, 8'b1000_0001, 8'b1000_0010, 8'b1000_0011, 
-                8'b1000_0100, 8'b1000_1001, 8'b1000_0110, 8'b1000_0111: begin
+                8'b1000_0100, 8'b1000_0101, 8'b1000_0110, 8'b1000_0111: begin
                     next_state = DIR_MOVING;
                 end
                 8'b0100_0000, 8'b0100_0001, 8'b0100_0100, 8'b0100_0101,
@@ -140,7 +152,7 @@ always @* begin
 end
 
 //state register
-always @(posedge clk) begin
+always @(negedge clk) begin
     if (enable) begin
         state <= next_state;
     end else begin
@@ -149,14 +161,14 @@ always @(posedge clk) begin
 end
 
 //counting
-always @(posedge clk) begin
+always @(negedge clk) begin
     case (state)
         TRIGGER_LEFT, TRIGGER_RIGHT, TRIGGER_BACK: turn_cnt <= turn_cnt + 1;
         default: turn_cnt <= 0;
     endcase
 end
 
-always @(posedge clk) begin
+always @(negedge clk) begin
     case (state)
         MOVING_END: moving_end_cnt <= moving_end_cnt + 1;
         default: moving_end_cnt <= 0;

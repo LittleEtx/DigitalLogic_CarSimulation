@@ -42,10 +42,12 @@ module engine(
     output [7:0] seg_out1, //[D4, E3, D3, F4, F3, E2, D2, H2]
     
     //debug signals
-    output [2:0] out_semi_state,
+    output reg [3:0] out_state, //[G3, J4, H4, J3]
     input middle_click,
     input middle_click_reverse
     );
+
+
     wire turn_left, turn_right, move_forward, move_backward, place_barrier, destroy_barrier;
     assign move_signal = {move_forward, move_backward, turn_left, turn_right};
     SimulatedDevice device_inst(
@@ -62,14 +64,15 @@ module engine(
         .back_detector(detector[1]), //actual left
         .left_detector(detector[0]), //actual right
         .right_detector(detector[2]) //actual back
-        );
-      
+    );
+
     wire [1:0] mode;
+    parameter MODE_SEMI = 2'b11, MODE_AUTO = 2'b10, MODE_MANUAL = 2'b01, MODE_OFF = 2'b00;
     //mode selection
     wire mode_semi, mode_auto, mode_manual, mode_off;
-    minterm_generator mode_select(.in(mode), .out({mode_semi, mode_auto, mode_manual, mode_off})); 
-    clock_diviser clk_div(.clk(clk), .reset(mode_off), .out_clk(out_clk));
-    
+    minterm_generator mode_select(.in(mode), .out({mode_semi, mode_auto, mode_manual, mode_off}));
+    clock_diviser clk_div(.clk(clk), .reset(1'b0), .out_clk(out_clk));
+
     //debug
     wire man_place_barrier, man_destroy_barrier;
     assign man_place_barrier = mode_manual & middle_click & ~middle_click_reverse;
@@ -82,7 +85,7 @@ module engine(
         .mode_selection(mode_selection), 
         .break(break), 
         .mode(mode)
-        );
+    );
 
     wire man_move_forward, man_turn_left, man_turn_right, man_move_backward; 
     man man_inst(
@@ -99,71 +102,56 @@ module engine(
         .move_backward(man_move_backward), 
         .turn_left(man_turn_left), 
         .turn_right(man_turn_right)
-        );
-
-    //auto turning
-    wire trigger_turn_left, trigger_turn_right, trigger_turn_back;
-    wire is_turning, auto_turn_left, auto_turn_right, auto_enable;
-    or u1(auto_enable, mode_semi, mode_auto);
-    auto_turning auto_turning_inst(
-        .clk(out_clk), 
-        .enable(auto_enable), 
-        .trigger_turn_left(trigger_turn_left), 
-        .trigger_turn_right(trigger_turn_right), 
-        .trigger_turn_back(trigger_turn_back), 
-        .turn_left(auto_turn_left), 
-        .turn_right(auto_turn_right), 
-        .is_turning(is_turning)
-        );
+    );
 
     //semi auto
-    wire semi_move_forward, semi_trigger_turn_left, semi_trigger_turn_right, semi_trigger_turn_back;
+    wire semi_move_forward, semi_turn_left, semi_turn_right;
+    wire [2:0] semi_state;
     semi_auto semi_auto_inst(
         .enable(mode_semi), 
         .clk(out_clk), 
-        .is_turning(is_turning), 
         .move_forward(up), 
         .move_left(left), 
         .move_right(right), 
         .move_backward(down), 
         .detector(detector),
         .out_move_forward(semi_move_forward), 
-        .trigger_turn_left(semi_trigger_turn_left), 
-        .trigger_turn_right(semi_trigger_turn_right), 
-        .trigger_turn_back(semi_trigger_turn_back), 
-        .out_state(out_semi_state)
-        );
-    
+        .turn_left(semi_turn_left), 
+        .turn_right(semi_turn_right), 
+        .out_state(semi_state)
+    );
+
     //auto
-    wire auto_move_forward, auto_trigger_turn_left, auto_trigger_turn_right, auto_trigger_turn_back, auto_move_backward;
+    wire auto_move_forward, auto_turn_left, auto_turn_right, auto_move_backward;
     wire auto_place_barrier, auto_destroy_barrier;
+    wire [3:0] auto_state;
     auto auto_inst(
         .enable(mode_auto), 
         .clk(out_clk), 
-        .moving(up),
-        .is_turning(is_turning), 
+        .start(up),
         .detector(detector),
         .move_forward(auto_move_forward),
+        .turn_left(auto_turn_left), 
+        .turn_right(auto_turn_right), 
         .move_backward(auto_move_backward), 
-        .trigger_turn_left(auto_trigger_turn_left), 
-        .trigger_turn_right(auto_trigger_turn_right), 
-        .trigger_turn_back(auto_trigger_turn_back), 
         .place_barrier_signal(auto_place_barrier), 
-        .destroy_barrier_signal(auto_destroy_barrier)
-        );
+        .destroy_barrier_signal(auto_destroy_barrier),
+        .out_state(auto_state)
+    );
 
-    mux_4_to_1 auto_turn_left_sel(.in({semi_trigger_turn_left, auto_trigger_turn_left, 2'b00}),
-        .sel(mode), .out(trigger_turn_left));
-    mux_4_to_1 auto_turn_right_sel(.in({semi_trigger_turn_right, auto_trigger_turn_right, 2'b00}),
-        .sel(mode), .out(trigger_turn_right));
-    mux_4_to_1 auto_turn_back_sel(.in({semi_trigger_turn_back, auto_trigger_turn_back, 2'b00}),
-        .sel(mode), .out(trigger_turn_back));
+    always @(mode, semi_state, auto_state) begin
+        case (mode)
+            MODE_SEMI: out_state = {1'b0, semi_state};
+            MODE_AUTO: out_state = auto_state; 
+            default: out_state = 4'b0000;
+        endcase
+    end
 
     mux_4_to_1 move_forward_sel(.in({semi_move_forward, auto_move_forward, man_move_forward, 1'b0}), 
         .sel(mode), .out(move_forward));
-    mux_4_to_1 turn_left_sel(.in({auto_turn_left, auto_turn_left, man_turn_left, 1'b0}), 
+    mux_4_to_1 turn_left_sel(.in({semi_turn_left, auto_turn_left, man_turn_left, 1'b0}), 
         .sel(mode), .out(turn_left));
-    mux_4_to_1 turn_right_sel(.in({auto_turn_right, auto_turn_right, man_turn_right, 1'b0}), 
+    mux_4_to_1 turn_right_sel(.in({semi_turn_right, auto_turn_right, man_turn_right, 1'b0}), 
         .sel(mode), .out(turn_right));
     mux_4_to_1 move_backward_sel(.in({1'b0, auto_move_backward, man_move_backward, 1'b0}), 
         .sel(mode), .out(move_backward));
