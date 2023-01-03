@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 2022/12/09 14:24:01
+// Create Date: 2022/12/09 14:00:28
 // Design Name: 
-// Module Name: car_LED
+// Module Name: start
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,12 +20,15 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module car_LED(
-    input state,
-    input clockwise,
-    input degree,
+module start(
     input clk,
-    output LED_left,
-    output LED_right
+    input power,
+    input [1:0] mode_selection,
+    input break,
+    output [1:0] mode
     );
+
+    //TODO
+    assign mode = 2'b11;
+
 endmodule

@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 2022/12/09 14:00:28
+// Create Date: 2022/12/09 14:03:54
 // Design Name: 
-// Module Name: start
+// Module Name: man
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,10 +20,19 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module start(
+module man(
+    input enable,
     input clk,
-    input power,
-    input [1:0] model_select,
-    output [1:0] model
+    input reverse,
+    input brake,
+    input clutch,
+    input throttle,
+    input left,
+    input right,
+    output break,
+    output move_forward,
+    output move_backward,
+    output turn_left,
+    output turn_right
     );
 endmodule

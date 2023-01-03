@@ -21,8 +21,9 @@
 
 
 module car_mileage(
-    input state,
     input clk,
-    output tube_switch
+    input move_forward,
+    input move_backward,
+    output [15:0] mile
     );
 endmodule
