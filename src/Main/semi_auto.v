@@ -152,7 +152,7 @@ always @* begin
 end
 
 //state register
-always @(negedge clk) begin
+always @(posedge clk) begin
     if (enable) begin
         state <= next_state;
     end else begin
@@ -161,14 +161,14 @@ always @(negedge clk) begin
 end
 
 //counting
-always @(negedge clk) begin
+always @(posedge clk) begin
     case (state)
         TRIGGER_LEFT, TRIGGER_RIGHT, TRIGGER_BACK: turn_cnt <= turn_cnt + 1;
         default: turn_cnt <= 0;
     endcase
 end
 
-always @(negedge clk) begin
+always @(posedge clk) begin
     case (state)
         MOVING_END: moving_end_cnt <= moving_end_cnt + 1;
         default: moving_end_cnt <= 0;

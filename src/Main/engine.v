@@ -21,7 +21,7 @@
 
 
 module engine(
-    input clk, //P17Main/Engine.v
+    input clk, //P17
     input rx, //N5
     input power, //S6
     input [1:0] mode_selection, //[N4,R1]
@@ -87,7 +87,8 @@ module engine(
         .mode(mode)
     );
 
-    wire man_move_forward, man_turn_left, man_turn_right, man_move_backward; 
+    wire man_move_forward, man_turn_left, man_turn_right, man_move_backward;
+    wire [1:0] man_state;
     man man_inst(
         .enable(mode_manual), 
         .clk(out_clk), 
@@ -101,7 +102,8 @@ module engine(
         .move_forward(man_move_forward), 
         .move_backward(man_move_backward), 
         .turn_left(man_turn_left), 
-        .turn_right(man_turn_right)
+        .turn_right(man_turn_right),
+        .out_state(man_state)
     );
 
     //semi auto
@@ -139,10 +141,11 @@ module engine(
         .out_state(auto_state)
     );
 
-    always @(mode, semi_state, auto_state) begin
-        case (mode)
-            MODE_SEMI: out_state = {1'b0, semi_state};
-            MODE_AUTO: out_state = auto_state; 
+    always @(*) begin
+        case ({mode_semi, mode_auto, mode_manual, mode_off})
+            4'b1000: out_state = {1'b0, semi_state};
+            4'b0100: out_state = auto_state;
+            4'b0010: out_state = {2'b0, man_state};
             default: out_state = 4'b0000;
         endcase
     end
@@ -161,10 +164,36 @@ module engine(
     mux_4_to_1 destroy_barrier_sel(.in({1'b0, auto_destroy_barrier, man_destroy_barrier, 1'b0}), 
         .sel(mode), .out(destroy_barrier));
 
+    wire LED_on;
+    assign LED_on = man_state && man_state == 2'b01;
+    car_LED LED_inst(
+        .clk(out_clk), 
+        .stay_left(LED_on),
+        .stay_right(LED_on), 
+        .twinkle_left(turn_left), 
+        .twinkle_right(turn_right), 
+        .left_light(left_light), 
+        .right_light(right_light)
+        );
+
     //displays
     wire [15:0] mile;
-    car_mileage mileage_inst(out_clk, move_forward, move_backward, mile);
-    car_seg seg_inst(out_clk, mode, mile, seg_en, seg_out0, seg_out1);
-    car_LED LED_inst(out_clk, mode, turn_left, turn_right, left_light, right_light);
+    car_mileage mileage_inst(
+        .clk(out_clk), 
+        .reset(mode_off), 
+        .move_forward(move_forward),
+        .move_backward(move_backward),
+        .mile(mile)
+        );
+    car_seg seg_inst(
+        .clk(out_clk), 
+        .reset(mode_off),
+        .mode(mode), 
+        .mile(mile), 
+        .seg_en(seg_en), 
+        .seg_out0(seg_out0), 
+        .seg_out1(seg_out1)
+        );
+    
 
 endmodule 

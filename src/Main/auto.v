@@ -164,7 +164,7 @@ module auto(
     end
 
     //state register
-    always @(negedge clk) begin
+    always @(posedge clk) begin
         if (enable) begin
             state <= next_state;
         end else begin
@@ -173,14 +173,14 @@ module auto(
     end
     
     //counting
-    always @(negedge clk) begin
+    always @(posedge clk) begin
         case (state)
             BACKING: backward_cnt <= backward_cnt + 1;
             default: backward_cnt <= 0;
         endcase
     end
 
-    always @(negedge clk) begin
+    always @(posedge clk) begin
         case (state)
             FORWARD: forward_cnt <= forward_cnt + 1;
             default: forward_cnt <= 0;

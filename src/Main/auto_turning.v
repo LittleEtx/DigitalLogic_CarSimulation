@@ -60,7 +60,7 @@ always @* begin
 end
 
 //counter
-always @(negedge clk) begin
+always @(posedge clk) begin
     case (state)
         LEFT_TURNING, RIGHT_TURNING, BACK_TURNING: cnt <= cnt + 1;
         default: cnt <= 0;
@@ -68,7 +68,7 @@ always @(negedge clk) begin
 end
 
 //state register
-always @(negedge clk) begin
+always @(posedge clk) begin
     if (enable) begin
         state <= next_state;
     end else begin
