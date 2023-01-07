@@ -35,7 +35,7 @@ module engine(
     output tx, //T4
     output left_light, //F6
     output right_light, //K2
-    output [3:0] detector, //[K6, L1, M1, K3]
+    output [3:0] out_detector, //[K6, L1, M1, K3]
     output [3:0] move_signal, //[K1, H6, H5, J5]
     output [7:0] seg_en, //[G2, C2, C1, H1, G1, F1, E1, G6]
     output [7:0] seg_out0, //[B4, A4, A3, B1. A1, B3, B2, D5]
@@ -49,6 +49,8 @@ module engine(
 
 
     wire turn_left, turn_right, move_forward, move_backward, place_barrier, destroy_barrier;
+    wire [3:0] detector;
+    assign out_detector = detector;
     assign move_signal = {move_forward, move_backward, turn_left, turn_right};
     SimulatedDevice device_inst(
         .sys_clk(clk), 

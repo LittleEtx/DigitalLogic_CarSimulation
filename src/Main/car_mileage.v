@@ -27,8 +27,8 @@ module car_mileage(
   output reg [15:0] mile
   );
 
-parameter FORWARD_COUNT = 46; // * 0.002s = 0.9s
-parameter BACKWARD_COUNT = 92; // * 0.002s = 1.8s
+parameter FORWARD_COUNT = 46; // * 0.002s = 0.09s
+parameter BACKWARD_COUNT = 92; // * 0.002s = 0.18s
 
 reg [1:0] state;
 reg [31:0] forward_cnt;

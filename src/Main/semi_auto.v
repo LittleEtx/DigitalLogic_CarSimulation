@@ -41,7 +41,7 @@ reg [2:0] state;
 reg [2:0] next_state;
 //trigger time
 parameter TURNING_TRIGGER = 100; // * 0.002 = 0.2 s
-parameter MOVING_END_TIME = 50; // * 0.002 = 0.1 s
+parameter MOVING_END_TIME = 50; // * 0.002 = 0.12 s
 reg [31:0] turn_cnt;
 reg [31:0] moving_end_cnt;
 

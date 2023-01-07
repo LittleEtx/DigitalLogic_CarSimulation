@@ -59,8 +59,8 @@ BCD_to_SEG s0(
 
 reg[3:0] number_mask;
 always@(*) begin
-    if (mile >> 8) number_mask = 4'b0111;
-    else if (mile >> 12) number_mask = 4'b1111;
+    if (mile >> 12) number_mask = 4'b1111;
+    else if (mile >> 8) number_mask = 4'b0111;
     else number_mask = 4'b0011;
 end
 
@@ -98,8 +98,8 @@ always@(posedge clk) begin
         enable <= 4'b0000;
     end
     else begin
-        if (enable == 4'b0000) enable <= 4'b0001;
-        else enable <= enable << 1;
+        if (enable == 4'b0000) enable <= 4'b1000;
+        else enable <= enable >> 1;
     end
 end
 
