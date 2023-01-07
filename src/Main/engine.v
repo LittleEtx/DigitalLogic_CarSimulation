@@ -43,7 +43,7 @@ module engine(
     
     //debug signals
     output reg [3:0] out_state, //[G3, J4, H4, J3]
-    input middle_click,
+    input middle, //R15
     input middle_click_reverse
     );
 
@@ -75,18 +75,19 @@ module engine(
 
     //debug
     wire man_place_barrier, man_destroy_barrier;
-    assign man_place_barrier = mode_manual & middle_click & ~middle_click_reverse;
-    assign man_destroy_barrier = mode_manual & middle_click & middle_click_reverse;
+    assign man_place_barrier = mode_manual & middle & ~middle_click_reverse;
+    assign man_destroy_barrier = mode_manual & middle & middle_click_reverse;
     
     wire break;
     start start_inst(
         .clk(out_clk), 
-        .power(power), 
+        .power(~power), 
         .mode_selection(mode_selection), 
         .break(break), 
         .mode(mode)
     );
 
+    //man
     wire man_move_forward, man_turn_left, man_turn_right, man_move_backward;
     wire [1:0] man_state;
     man man_inst(
@@ -98,6 +99,8 @@ module engine(
         .throttle(up), 
         .left(left), 
         .right(right),
+        .back(down),
+        .enable_auto_turing(mode_selection[1]),
         .break(break), 
         .move_forward(man_move_forward), 
         .move_backward(man_move_backward), 
@@ -168,8 +171,7 @@ module engine(
     assign LED_on = man_state && man_state == 2'b01;
     car_LED LED_inst(
         .clk(out_clk), 
-        .stay_left(LED_on),
-        .stay_right(LED_on), 
+        .stay(LED_on),
         .twinkle_left(turn_left), 
         .twinkle_right(turn_right), 
         .left_light(left_light), 
@@ -187,7 +189,7 @@ module engine(
         );
     car_seg seg_inst(
         .clk(out_clk), 
-        .reset(mode_off),
+        .reset(1'b0),
         .mode(mode), 
         .mile(mile), 
         .seg_en(seg_en), 

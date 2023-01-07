@@ -22,29 +22,35 @@
 
 module car_LED(
     input clk,
-    input stay_left,
-    input stay_right,
+    input stay,
     input twinkle_left,
     input twinkle_right,
     output reg left_light,
     output reg right_light
     );
 
-always@(posedge clk) begin
-  case ({stay_left, twinkle_left})
-    2'b10, 2'b11: left_light <= 1'b1;
-    2'b01: left_light <= ~left_light;
-    default: left_light <= 1'b0;
-  endcase
+parameter div = 150; // *0.002 = 0.3s
+reg clk_div;
+reg [31:0] cnt;
+//counting
+always @(posedge clk) begin 
+    if (cnt == (div >> 1) - 1) begin
+        clk_div <= ~clk_div;
+        cnt <= 0;
+    end
+    else begin
+        cnt <= cnt + 1;
+    end
 end
 
-always@(posedge clk) begin
-  case ({stay_right, twinkle_right})
-    2'b10, 2'b11: right_light <= 1'b1;
-    2'b01: right_light <= ~right_light;
-    default: right_light <= 1'b0;
+
+always@(posedge clk_div) begin
+  case ({stay, twinkle_left, twinkle_right})
+    3'b100, 3'b111: {left_light, right_light} <= 2'b11;
+    3'b110, 3'b010: {left_light, right_light} <= {~left_light, 1'b0};
+    3'b101, 3'b001: {left_light, right_light} <= {1'b0, ~right_light};
+    default: {left_light, right_light} <= 2'b00;
   endcase
 end
-
 
 endmodule

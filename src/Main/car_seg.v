@@ -4,7 +4,7 @@ module car_seg (
     input reset,
     input [1:0] mode,
     input [15:0] mile,
-    output [7:0] seg_en,
+    output reg [7:0] seg_en,
     output reg [7:0] seg_out0,
     output reg [7:0] seg_out1
 );
@@ -22,11 +22,18 @@ SEG_E = 8'b1001_1110;
 reg [31:0] seg0;
 wire [31:0] seg1;
 reg [3:0] enable;
-assign seg_en = {enable, enable};
+
+always @(*) begin
+    if (mode == 2'b00) begin
+        seg_en = {enable, 4'b0000};
+    end else begin
+        seg_en = {enable, enable};
+    end
+end
 
 always@(*) begin
     case(mode)
-    2'b00: seg0 = {SEG_null, SEG_O, SEG_O, SEG_F};
+    2'b00: seg0 = {SEG_null, SEG_O, SEG_F, SEG_F};
     2'b01: seg0 = {SEG_null, SEG_null, SEG_H, SEG_A};
     2'b10: seg0 = {SEG_null, SEG_null, SEG_A, SEG_U};
     2'b11: seg0 = {SEG_null, SEG_null, SEG_S, SEG_E};
